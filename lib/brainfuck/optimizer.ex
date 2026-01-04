@@ -12,9 +12,7 @@ defmodule Brainfuck.Optimizer do
     `>>>[+->>]++` becomes `++`.
   - Removes sequentional loops: `[>][<]` becomes `[>]`.
   - Drops dead code at the end: `+++++.>>><-` becomes `+++++.`.
-    This optimization is quite destructive, because in the following code
-    the infinity loop at the end will also be removed: `+++.[-+]` becomes `+++.`.
-    It is not considered to be a bug, it's a feature!
+    Current limitation: does not drop dead loops.
 
   ## Examples
 
@@ -92,7 +90,8 @@ defmodule Brainfuck.Optimizer do
     |> Enum.drop_while(fn
       :in -> false
       :out -> false
-      {:loop, body} -> not io_inside?(body)
+      # TODO: add a check that a loop is dead
+      {:loop, _body} -> false
       _ -> true
     end)
     |> Enum.reverse()
