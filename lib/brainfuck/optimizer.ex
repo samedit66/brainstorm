@@ -33,6 +33,12 @@ defmodule Brainfuck.Optimizer do
     |> peephole_optimize([])
     |> remove_redundant(:at_start)
     |> remove_redundant(:at_end)
+
+    # After `fuse` we need to apply peephole optimizations again,
+    # because sometimes `fuse` may generate a code like this: `[{:shift, 2}, {:shift, -2}]`.
+    # Example: `+[>-<->>+++<<].`.
+    |> fuse([])
+    |> peephole_optimize([])
   end
 
   defp peephole_optimize([], optimized),
@@ -102,4 +108,30 @@ defmodule Brainfuck.Optimizer do
   defp io_inside?([:out | _rest]), do: true
   defp io_inside?([{:loop, body} | rest]), do: io_inside?(body) || io_inside?(rest)
   defp io_inside?([_command | rest]), do: io_inside?(rest)
+
+  defp fuse([], fused), do: Enum.reverse(fused)
+
+  defp fuse(
+         [{:shift, offset1}, {:inc, by1} | rest],
+         [{:inc_offset, _by2, offset2} | _fused_rest] = fused
+       ) do
+    fuse(rest, [{:inc_offset, by1, offset1 + offset2} | fused])
+  end
+
+  defp fuse([{:shift, offset}, {:inc, by} | rest], fused) do
+    fuse(rest, [{:inc_offset, by, offset} | fused])
+  end
+
+  defp fuse([{:loop, body} | rest], fused) do
+    fuse(rest, [{:loop, fuse(body, [])} | fused])
+  end
+
+  defp fuse([command | rest], [{:inc_offset, _by, offset} | _fused_rest] = fused) do
+    fuse(rest, [command, {:shift, offset} | fused])
+  end
+
+  defp fuse([command | rest], fused), do: fuse(rest, [command | fused])
+
+  defp replace_mult_loops() do
+  end
 end
