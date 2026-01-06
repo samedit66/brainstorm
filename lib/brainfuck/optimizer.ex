@@ -17,7 +17,7 @@ defmodule Brainfuck.Optimizer do
   ## Examples
 
       iex> Brainfuck.Optimizer.optimize([{:inc, 10}, {:inc, -4}, :out])
-      [{:inc, 6}, :out]
+      [{:inc_offset, 6, 0}, :out]
 
   Note, that if you run `optimize` on the code which has not IO,
   you'll see nothing:
@@ -28,8 +28,8 @@ defmodule Brainfuck.Optimizer do
   It's not a bug: no IO happens, no interactions with user, no computations performed.
 
   """
-  def optimize(ast) do
-    ast
+  def optimize(commands) do
+    commands
     |> peephole_optimize([])
     |> remove_redundant(:at_start)
     |> remove_redundant(:at_end)
@@ -39,7 +39,7 @@ defmodule Brainfuck.Optimizer do
     # Example: `+[>-<->>+++<<].`.
     |> fuse([])
     |> peephole_optimize([])
-    |> eliminate_multiplication_loops([])
+    |> unwrap_loops([])
   end
 
   defp peephole_optimize([], optimized),
@@ -88,11 +88,11 @@ defmodule Brainfuck.Optimizer do
   defp remove_redundant([{:shift, _n}, {:loop, _body} | rest], :at_start),
     do: remove_redundant(rest, :at_start)
 
-  defp remove_redundant(ast, :at_start),
-    do: ast |> Enum.drop_while(&match?({:loop, _body}, &1))
+  defp remove_redundant(commands, :at_start),
+    do: commands |> Enum.drop_while(&match?({:loop, _body}, &1))
 
-  defp remove_redundant(ast, :at_end) do
-    ast
+  defp remove_redundant(commands, :at_end) do
+    commands
     |> Enum.reverse()
     |> Enum.drop_while(fn
       :in -> false
@@ -104,71 +104,74 @@ defmodule Brainfuck.Optimizer do
     |> Enum.reverse()
   end
 
-  defp io_inside?([]), do: false
-  defp io_inside?([:in | _rest]), do: true
-  defp io_inside?([:out | _rest]), do: true
-  defp io_inside?([{:loop, body} | rest]), do: io_inside?(body) || io_inside?(rest)
-  defp io_inside?([_command | rest]), do: io_inside?(rest)
-
-  defp fuse([], fused), do: Enum.reverse(fused)
+  defp fuse([], optimized), do: Enum.reverse(optimized)
 
   defp fuse(
          [{:shift, offset1}, {:inc, by1} | rest],
-         [{:inc_offset, _by2, offset2} | _fused_rest] = fused
+         [{:inc_offset, _by2, offset2} | _optimized_rest] = optimized
        ) do
-    fuse(rest, [{:inc_offset, by1, offset1 + offset2} | fused])
+    fuse(rest, [{:inc_offset, by1, offset1 + offset2} | optimized])
   end
 
-  defp fuse([{:shift, offset}, {:inc, by} | rest], fused) do
-    fuse(rest, [{:inc_offset, by, offset} | fused])
+  defp fuse([{:shift, offset}, {:inc, by} | rest], optimized) do
+    fuse(rest, [{:inc_offset, by, offset} | optimized])
   end
 
-  defp fuse([{:inc, by} | rest], fused), do: fuse(rest, [{:inc_offset, by, 0} | fused])
-
-  defp fuse([{:loop, body} | rest], fused) do
-    fuse(rest, [{:loop, fuse(body, [])} | fused])
+  defp fuse([{:inc, by} | rest], optimized) do
+    fuse(rest, [{:inc_offset, by, 0} | optimized])
   end
 
-  defp fuse([command | rest], [{:inc_offset, _by, offset} | _fused_rest] = fused) do
-    fuse(rest, [command, {:shift, offset} | fused])
+  defp fuse([{:loop, body} | rest], optimized) do
+    fuse(rest, [{:loop, fuse(body, [])} | optimized])
+  end
+
+  defp fuse(
+         [command | rest],
+         [{:inc_offset, _by, offset} | _optimized_rest] = optimized
+       ) do
+    fuse(rest, [command, {:shift, offset} | optimized])
   end
 
   defp fuse([command | rest], fused), do: fuse(rest, [command | fused])
 
-  def eliminate_multiplication_loops([], optimized), do: Enum.reverse(optimized)
+  defp unwrap_loops([], optimized), do: Enum.reverse(optimized)
 
-  def eliminate_multiplication_loops([{:loop, body} = loop | rest], optimized) do
-    loop =
-      case try_transform_loop(loop) do
-        :no_transform ->
-          [{:loop, eliminate_multiplication_loops(body, [])}]
+  defp unwrap_loops([{:loop, body} | rest], optimized) do
+    case parse_mults(body) do
+      :failed ->
+        unwrap_loops(rest, [{:loop, unwrap_loops(body, [])} | optimized])
 
-        {:ok, transformed} ->
-          transformed |> Enum.reverse()
-      end
-
-    eliminate_multiplication_loops(rest, loop ++ optimized)
+      {:ok, mults} ->
+        unwrap_loops(rest, [:zero] ++ mults ++ optimized)
+    end
   end
 
-  def eliminate_multiplication_loops([command | rest], optimized) do
-    eliminate_multiplication_loops(rest, [command | optimized])
+  defp unwrap_loops([command | rest], optimized) do
+    unwrap_loops(rest, [command | optimized])
   end
 
-  def try_transform_loop({:loop, body}) do
-    {increments, others} =
-      body |> Enum.split_with(&match?({:inc_offset, _by, _offset}, &1))
+  defp parse_mults(commands) do
+    {candidates, others} =
+      commands
+      |> Enum.split_with(&match?({:inc_offset, _by, _offset}, &1))
 
-    case {increments, others} do
-      {_, [_head | _tail]} ->
-        :no_transform
+    {decrements, increments} =
+      candidates
+      |> Enum.split_with(&match?({:inc_offset, -1, 0}, &1))
 
-      {_, []} ->
-        {[_decrement], multiplications} =
-          increments |> Enum.split_with(&match?({:inc_offset, -1, 0}, &1))
+    # A multiplication loop consists only of:
+    # - only one decrement
+    # - one or more increment of some cell
+    case {others, decrements, increments} do
+      {[], [_decrement], [_first | _rest]} ->
+        {
+          :ok,
+          increments
+          |> Enum.map(fn {:inc_offset, by, offset} -> {:mult_offset, by, offset} end)
+        }
 
-        {:ok,
-         (multiplications
-          |> Enum.map(fn {:inc_offset, by, offset} -> {:mul, by, offset} end)) ++ [:zero]}
+      _ ->
+        :failed
     end
   end
 end
