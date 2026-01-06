@@ -39,6 +39,7 @@ defmodule Brainfuck.Optimizer do
     # Example: `+[>-<->>+++<<].`.
     |> fuse([])
     |> peephole_optimize([])
+    |> eliminate_multiplication_loops([])
   end
 
   defp peephole_optimize([], optimized),
@@ -122,6 +123,8 @@ defmodule Brainfuck.Optimizer do
     fuse(rest, [{:inc_offset, by, offset} | fused])
   end
 
+  defp fuse([{:inc, by} | rest], fused), do: fuse(rest, [{:inc_offset, by, 0} | fused])
+
   defp fuse([{:loop, body} | rest], fused) do
     fuse(rest, [{:loop, fuse(body, [])} | fused])
   end
@@ -132,6 +135,40 @@ defmodule Brainfuck.Optimizer do
 
   defp fuse([command | rest], fused), do: fuse(rest, [command | fused])
 
-  defp replace_mult_loops() do
+  def eliminate_multiplication_loops([], optimized), do: Enum.reverse(optimized)
+
+  def eliminate_multiplication_loops([{:loop, body} = loop | rest], optimized) do
+    loop =
+      case try_transform_loop(loop) do
+        :no_transform ->
+          [{:loop, eliminate_multiplication_loops(body, [])}]
+
+        {:ok, transformed} ->
+          transformed |> Enum.reverse()
+      end
+
+    eliminate_multiplication_loops(rest, loop ++ optimized)
+  end
+
+  def eliminate_multiplication_loops([command | rest], optimized) do
+    eliminate_multiplication_loops(rest, [command | optimized])
+  end
+
+  def try_transform_loop({:loop, body}) do
+    {increments, others} =
+      body |> Enum.split_with(&match?({:inc_offset, _by, _offset}, &1))
+
+    case {increments, others} do
+      {_, [_head | _tail]} ->
+        :no_transform
+
+      {_, []} ->
+        {[_decrement], multiplications} =
+          increments |> Enum.split_with(&match?({:inc_offset, -1, 0}, &1))
+
+        {:ok,
+         (multiplications
+          |> Enum.map(fn {:inc_offset, by, offset} -> {:mul, by, offset} end)) ++ [:zero]}
+    end
   end
 end
