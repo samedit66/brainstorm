@@ -65,9 +65,6 @@ defmodule Brainfuck.Compiler do
   defp normalize_compile_result({:error, reason}, bf_file),
     do: {:error, format_compile_error(bf_file, reason)}
 
-  defp normalize_compile_result(other, bf_file),
-    do: {:error, format_compile_error(bf_file, other)}
-
   defp format_compile_error(bf_file, reason) do
     """
     ✖ Brainfuck compilation failed
