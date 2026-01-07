@@ -95,26 +95,26 @@ defmodule Brainfuck.Parser do
   defp do_parse(["]" | _rest], _commands), do: {:error, "Missing loop start."}
 
   defp do_parse(["+" | _rest] = tokens, commands) do
-    {count, rest} = count(tokens, "+")
+    {count, rest} = cut_and_count(tokens, "+")
     do_parse(rest, [{:inc, count} | commands])
   end
 
   defp do_parse(["-" | _rest] = tokens, commands) do
-    {count, rest} = count(tokens, "-")
+    {count, rest} = cut_and_count(tokens, "-")
     do_parse(rest, [{:inc, -count} | commands])
   end
 
   defp do_parse([">" | _rest] = tokens, commands) do
-    {count, rest} = count(tokens, ">")
+    {count, rest} = cut_and_count(tokens, ">")
     do_parse(rest, [{:shift, count} | commands])
   end
 
   defp do_parse(["<" | _rest] = tokens, commands) do
-    {count, rest} = count(tokens, "<")
+    {count, rest} = cut_and_count(tokens, "<")
     do_parse(rest, [{:shift, -count} | commands])
   end
 
-  defp count(tokens, token) do
+  defp cut_and_count(tokens, token) do
     {repeated, rest} = tokens |> Enum.split_while(&(&1 == token))
     {Enum.count(repeated), rest}
   end
