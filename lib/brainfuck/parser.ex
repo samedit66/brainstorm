@@ -17,10 +17,10 @@ defmodule Brainfuck.Parser do
   ## Examples
 
       iex> Brainfuck.Parser.parse("+")
-      {:ok, [inc: 1]}
+      {:ok, [{:inc, 1, 0}]}
 
       iex> Brainfuck.Parser.parse("-")
-      {:ok, [inc: -1]}
+      {:ok, [{:inc, -1, 0}]}
 
       iex> Brainfuck.Parser.parse(">")
       {:ok, [shift: 1]}
@@ -47,7 +47,7 @@ defmodule Brainfuck.Parser do
       {:ok, []}
 
       iex> Brainfuck.Parser.parse("here we go: +++[->+<]")
-      {:ok, [{:inc, 3}, {:loop, [{:inc, -1}, {:shift, 1}, {:inc, 1}, {:shift, -1}]}]}
+      {:ok, [{:inc, 3, 0}, {:loop, [{:inc, -1, 0}, {:shift, 1}, {:inc, 1, 0}, {:shift, -1}]}]}
 
   Invalid brainfuck code results in an error:
 
@@ -96,12 +96,12 @@ defmodule Brainfuck.Parser do
 
   defp do_parse(["+" | _rest] = tokens, commands) do
     {count, rest} = cut_and_count(tokens, "+")
-    do_parse(rest, [{:inc, count} | commands])
+    do_parse(rest, [{:inc, count, 0} | commands])
   end
 
   defp do_parse(["-" | _rest] = tokens, commands) do
     {count, rest} = cut_and_count(tokens, "-")
-    do_parse(rest, [{:inc, -count} | commands])
+    do_parse(rest, [{:inc, -count, 0} | commands])
   end
 
   defp do_parse([">" | _rest] = tokens, commands) do
