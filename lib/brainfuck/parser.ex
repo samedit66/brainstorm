@@ -85,10 +85,12 @@ defmodule Brainfuck.Parser do
     do: do_parse(rest, [:zero | commands])
 
   defp do_parse(["[" | rest], commands) do
-    with {:ok, loop_tokens, rest} <- extract_loop(rest, [], 1) do
-      do_parse(rest, [{:loop, do_parse(loop_tokens, [])} | commands])
-    else
-      {:error, reason} -> {:error, reason}
+    case extract_loop(rest, [], 1) do
+      {:error, reason} ->
+        {:error, reason}
+
+      {:ok, body, rest} ->
+        do_parse(rest, [{:loop, do_parse(body, [])} | commands])
     end
   end
 
