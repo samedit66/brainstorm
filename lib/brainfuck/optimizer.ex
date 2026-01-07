@@ -1,8 +1,7 @@
 defmodule Brainfuck.Optimizer do
   @doc """
-  Optimizes given `ast`.
+  Optimizes given `commands`.
   The following optimization techniques are used:
-  - Squeezes sequences like `+++.` into just `.`.
   - Combines sequentional increments and decrements into a single instruction:
     `+++--` becomes `+`.
   - Does the same for shifting: `>>>><<` becomes `>>`.
@@ -13,20 +12,23 @@ defmodule Brainfuck.Optimizer do
   - Removes sequentional loops: `[>][<]` becomes `[>]`.
   - Drops dead code at the end: `+++++.>>><-` becomes `+++++.`.
     Current limitation: does not drop dead loops.
+  - Combines increments and shifts into a signle command.
+  - Recongnizes so called "multiplication loops" and replaces them with real multiplications:
+    `>+++++++++[<++++++++>-].` becomes
+    `arr[i + 1] = 9; i += 1; arr[i - 1] += arr[i] * 8; arr[i] = 0;`.
 
   ## Examples
 
-      iex> Brainfuck.Optimizer.optimize([{:inc, 10}, {:inc, -4}, :out])
-      [{:inc_offset, 6, 0}, :out]
+      iex> Brainfuck.Optimizer.optimize([{:inc, 10, 0}, {:inc, -4, 0}, :out])
+      [{:inc, 6, 0}, :out]
 
   Note, that if you run `optimize` on the code which has not IO,
   you'll see nothing:
 
-      iex> Brainfuck.Optimizer.optimize([{:inc, 10}, {:inc, -4}])
+      iex> Brainfuck.Optimizer.optimize([{:inc, 10, 0}, {:inc, -4, 0}])
       []
 
   It's not a bug: no IO happens, no interactions with user, no computations performed.
-
   """
   def optimize(commands) do
     commands
@@ -48,22 +50,22 @@ defmodule Brainfuck.Optimizer do
   defp peephole_optimize([:zero, :in | rest], optimized),
     do: peephole_optimize([:in | rest], optimized)
 
-  defp peephole_optimize([:zero, {:inc, _n} = inc | rest], optimized),
+  defp peephole_optimize([:zero, {:inc, _by, 0} = inc | rest], optimized),
     do: peephole_optimize([inc | rest], optimized)
 
   defp peephole_optimize([:zero, {:loop, _body} | rest], optimized),
     do: peephole_optimize([:zero | rest], optimized)
 
-  defp peephole_optimize([{:inc, _n}, :zero | rest], optimized),
+  defp peephole_optimize([{:inc, _by, _offset}, :zero | rest], optimized),
     do: peephole_optimize([:zero | rest], optimized)
 
-  defp peephole_optimize([{:inc, n}, {:inc, m} | rest], optimized),
-    do: peephole_optimize([{:inc, n + m} | rest], optimized)
+  defp peephole_optimize([{:inc, n, 0}, {:inc, m, 0} | rest], optimized),
+    do: peephole_optimize([{:inc, n + m, 0} | rest], optimized)
 
-  defp peephole_optimize([{:inc, 0} | rest], optimized),
+  defp peephole_optimize([{:inc, 0, 0} | rest], optimized),
     do: peephole_optimize(rest, optimized)
 
-  defp peephole_optimize([{:inc, _n}, :in | rest], optimized),
+  defp peephole_optimize([{:inc, _n, 0}, :in | rest], optimized),
     do: peephole_optimize([:in | rest], optimized)
 
   defp peephole_optimize([{:shift, 0} | rest], optimized),
@@ -107,18 +109,21 @@ defmodule Brainfuck.Optimizer do
   defp fuse([], optimized), do: Enum.reverse(optimized)
 
   defp fuse(
-         [{:shift, offset1}, {:inc, by1} | rest],
-         [{:inc_offset, _by2, offset2} | _optimized_rest] = optimized
+         [{:shift, offset1}, {:inc, by1, 0} | rest],
+         [{:inc, _by2, offset2} | _optimized_rest] = optimized
        ) do
-    fuse(rest, [{:inc_offset, by1, offset1 + offset2} | optimized])
+    fuse(rest, [{:inc, by1, offset1 + offset2} | optimized])
   end
 
-  defp fuse([{:shift, offset}, {:inc, by} | rest], optimized) do
-    fuse(rest, [{:inc_offset, by, offset} | optimized])
+  defp fuse([{:shift, offset}, {:inc, by, 0} | rest], optimized) do
+    fuse(rest, [{:inc, by, offset} | optimized])
   end
 
-  defp fuse([{:inc, by} | rest], optimized) do
-    fuse(rest, [{:inc_offset, by, 0} | optimized])
+  defp fuse(
+         [{:loop, _body} | _rest] = commands,
+         [{:inc, _by, offset} | _optimized_rest] = optimized
+       ) do
+    fuse(commands, [{:shift, offset} | optimized])
   end
 
   defp fuse([{:loop, body} | rest], optimized) do
@@ -127,7 +132,7 @@ defmodule Brainfuck.Optimizer do
 
   defp fuse(
          [command | rest],
-         [{:inc_offset, _by, offset} | _optimized_rest] = optimized
+         [{:inc, _by, offset} | _optimized_rest] = optimized
        ) do
     fuse(rest, [command, {:shift, offset} | optimized])
   end
@@ -153,11 +158,11 @@ defmodule Brainfuck.Optimizer do
   defp parse_mults(commands) do
     {candidates, others} =
       commands
-      |> Enum.split_with(&match?({:inc_offset, _by, _offset}, &1))
+      |> Enum.split_with(&match?({:inc, _by, _offset}, &1))
 
     {decrements, increments} =
       candidates
-      |> Enum.split_with(&match?({:inc_offset, -1, 0}, &1))
+      |> Enum.split_with(&match?({:inc, -1, 0}, &1))
 
     # A multiplication loop consists only of:
     # - only one decrement
@@ -167,7 +172,7 @@ defmodule Brainfuck.Optimizer do
         {
           :ok,
           increments
-          |> Enum.map(fn {:inc_offset, by, offset} -> {:mult_offset, by, offset} end)
+          |> Enum.map(fn {:inc, by, offset} -> {:mult, by, offset} end)
         }
 
       _ ->
