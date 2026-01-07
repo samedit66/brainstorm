@@ -17,22 +17,34 @@ defmodule Brainfuck.Optimizer do
     `>+++++++++[<++++++++>-].` becomes
     `arr[i + 1] = 9; i += 1; arr[i - 1] += arr[i] * 8; arr[i] = 0;`.
 
+  You can control what optimizations are perfomed with `opt_level`:
+  - `:o0` - no optimization (return original commands)
+  - `:o1` - peephole optimization
+  - `:o2` - full optimizations (`:o1`, remove trivial start/end, fuse and unwrap multiplication loops)
+
   ## Examples
 
-      iex> Brainfuck.Optimizer.optimize([{:inc, 10, 0}, {:inc, -4, 0}, :out])
-      [{:inc, 6, 0}, :out]
+      iex> Brainfuck.Optimizer.optimize([{:inc, 10, 0}, {:inc, -4, 0}], :o1)
+      [{:inc, 6, 0}]
 
-  Note, that if you run `optimize` on the code which has not IO,
-  you'll see nothing:
+  Note that if you run default `optimize` (with `:o2` opt-level) on the code
+  which has no IO, you won't see anything:
 
       iex> Brainfuck.Optimizer.optimize([{:inc, 10, 0}, {:inc, -4, 0}])
       []
 
-  It's not a bug: no IO happens, no interactions with user, no computations performed.
+  That's intentional: no IO happens, no interactions with user, no computations performed.
+
   """
-  def optimize(commands) do
+  def optimize(commands, opt_level \\ :o2)
+
+  def optimize(commands, :o0), do: commands
+
+  def optimize(commands, :o1), do: commands |> peephole_optimize([])
+
+  def optimize(commands, :o2) do
     commands
-    |> peephole_optimize([])
+    |> optimize(:o1)
     |> remove_redundant(:at_start)
     |> remove_redundant(:at_end)
 
