@@ -58,6 +58,8 @@ defmodule Brainfuck.Backend.C do
 
   defp parse_to_fputs(out_queue) do
     case parse_as_c_literal(out_queue) do
+      {:string, "\"\""} -> []
+
       {:string, string} ->
         ["fputs(#{string}, stdout);"]
 

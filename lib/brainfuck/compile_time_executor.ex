@@ -68,8 +68,22 @@ defmodule Brainfuck.CompileTimeExecutor do
     {:partial, prepare_output(env), commands}
   end
 
-  defp do_execute([{:loop, _body} | _rest] = commands, env) do
-    {:partial, prepare_output(env), commands}
+  defp do_execute([{:loop, body} | rest] = commands, %{i: i, tape: tape} = env) do
+    if Map.get(tape, i, 0) == 0 do
+      do_execute(rest, env)
+    else
+      case do_execute(body, env) do
+        {:partial, _some_env} ->
+          {:partial, prepare_output(env), commands}
+
+        {:full, %{i: i, tape: tape} = env_after_iter} ->
+          if Map.get(tape, i, 0) == 0 do
+            do_execute(rest, env_after_iter)
+          else
+            do_execute(commands, env_after_iter)
+          end
+      end
+    end
   end
 
   defp prepare_output(%{out_queue: out_queue} = env) do
