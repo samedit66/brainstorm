@@ -40,7 +40,7 @@ defmodule Brainfuck.Optimizer do
 
   def optimize(commands, :o0), do: commands
 
-  def optimize(commands, :o1), do: commands |> peephole_optimize([])
+  def optimize(commands, :o1), do: commands |> peephole_optimize()
 
   def optimize(commands, :o2) do
     commands
@@ -54,23 +54,24 @@ defmodule Brainfuck.Optimizer do
     |> fuse()
     |> peephole_optimize()
     |> unwrap_loops()
+    |> peephole_optimize()
   end
 
   defp peephole_optimize(commands), do: peephole_optimize(commands, [])
 
   defp peephole_optimize([], optimized), do: Enum.reverse(optimized)
 
-  defp peephole_optimize([:zero, :in | rest], optimized),
+  defp peephole_optimize([{:set, 0}, :in | rest], optimized),
     do: peephole_optimize([:in | rest], optimized)
 
-  defp peephole_optimize([:zero, {:inc, _by, 0} = inc | rest], optimized),
-    do: peephole_optimize([inc | rest], optimized)
+  defp peephole_optimize([{:set, 0}, {:inc, by, 0} | rest], optimized),
+    do: peephole_optimize([{:set, by} | rest], optimized)
 
-  defp peephole_optimize([:zero, {:loop, _body} | rest], optimized),
-    do: peephole_optimize([:zero | rest], optimized)
+  defp peephole_optimize([{:set, 0}, {:loop, _body} | rest], optimized),
+    do: peephole_optimize([{:set, 0} | rest], optimized)
 
-  defp peephole_optimize([{:inc, _by, _offset}, :zero | rest], optimized),
-    do: peephole_optimize([:zero | rest], optimized)
+  defp peephole_optimize([{:inc, _by, _offset}, {:set, 0} | rest], optimized),
+    do: peephole_optimize([{:set, 0} | rest], optimized)
 
   defp peephole_optimize([{:inc, n, 0}, {:inc, m, 0} | rest], optimized),
     do: peephole_optimize([{:inc, n + m, 0} | rest], optimized)
@@ -119,24 +120,28 @@ defmodule Brainfuck.Optimizer do
     |> Enum.reverse()
   end
 
-  defp fuse(commands), do: fuse(commands, 0, [])
+  defp fuse(commands), do: fuse(commands, [], 0)
 
-  defp fuse([], cursor, acc), do: Enum.reverse([{:shift, cursor} | acc])
+  defp fuse([], optimized, 0), do: Enum.reverse(optimized)
 
-  defp fuse([{:shift, n} | rest], cursor, acc) do
-    fuse(rest, cursor + n, acc)
+  defp fuse([], optimized, cursor) do
+     Enum.reverse([{:shift, cursor} | optimized])
   end
 
-  defp fuse([{:inc, by, 0} | rest], cursor, acc) do
-    fuse(rest, cursor, [{:inc, by, cursor} | acc])
+  defp fuse([{:shift, offset} | rest], optimized, cursor) do
+    fuse(rest, optimized, cursor + offset)
   end
 
-  defp fuse([{:loop, body} | rest], cursor, acc) do
-    fuse(rest, 0, [{:loop, fuse(body)}, {:shift, cursor} | acc])
+  defp fuse([{:inc, by, 0} | rest], optimized, cursor) do
+    fuse(rest, [{:inc, by, cursor} | optimized], cursor)
   end
 
-  defp fuse([other | rest], cursor, acc) do
-    fuse(rest, 0, [other, {:shift, cursor} | acc])
+  defp fuse([{:loop, body} | rest], optimized, cursor) do
+    fuse(rest, [{:loop, fuse(body)}, {:shift, cursor} | optimized], 0)
+  end
+
+  defp fuse([command | rest], optimized, cursor) do
+    fuse(rest, [command, {:shift, cursor} | optimized], 0)
   end
 
   defp unwrap_loops(commands), do: unwrap_loops(commands, [])
@@ -149,7 +154,7 @@ defmodule Brainfuck.Optimizer do
         unwrap_loops(rest, [{:loop, unwrap_loops(body, [])} | optimized])
 
       {:ok, mults} ->
-        unwrap_loops(rest, [:zero] ++ mults ++ optimized)
+        unwrap_loops(rest, [{:set, 0}] ++ mults ++ optimized)
     end
   end
 

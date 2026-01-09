@@ -38,10 +38,7 @@ defmodule Brainfuck.Parser do
       {:ok, [loop: []]}
 
       iex> Brainfuck.Parser.parse("[-]")
-      {:ok, [:zero]}
-
-      iex> Brainfuck.Parser.parse("[+]")
-      {:ok, [:zero]}
+      {:ok, [set: 0]}
 
       iex> Brainfuck.Parser.parse("This will be deleted")
       {:ok, []}
@@ -79,10 +76,7 @@ defmodule Brainfuck.Parser do
     do: do_parse(rest, [:in | commands])
 
   defp do_parse(["[", "-", "]" | rest], commands),
-    do: do_parse(rest, [:zero | commands])
-
-  defp do_parse(["[", "+", "]" | rest], commands),
-    do: do_parse(rest, [:zero | commands])
+    do: do_parse(rest, [{:set, 0} | commands])
 
   defp do_parse(["[" | rest], commands) do
     case extract_loop(rest, [], 1) do

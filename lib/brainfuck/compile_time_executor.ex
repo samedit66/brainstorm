@@ -38,8 +38,8 @@ defmodule Brainfuck.CompileTimeExecutor do
 
   defp do_execute([], env), do: {:full, env}
 
-  defp do_execute([:zero | rest], %{i: i, tape: tape} = env) do
-    do_execute(rest, %{env | tape: Map.put(tape, i, 0)})
+  defp do_execute([{:set, value} | rest], %{i: i, tape: tape} = env) do
+    do_execute(rest, %{env | tape: Map.put(tape, i, value)})
   end
 
   defp do_execute([{:inc, by, offset} | rest], %{i: i, tape: tape} = env) do
