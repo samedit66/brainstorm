@@ -112,7 +112,7 @@ defmodule Brainfuck.Backend.C do
 
   defp render_cmd(:in, level), do: [indent("arr[i] = getchar();", level)]
 
-  defp render_cmd(:zero, level), do: [indent("arr[i] = 0;", level)]
+  defp render_cmd({:set, value}, level), do: [indent("arr[i] = #{value};", level)]
 
   defp render_cmd({:inc, 0, _offset}, _level), do: []
 

@@ -76,7 +76,7 @@ defmodule Brainfuck.CompileTimeExecutor do
 
       _non_zero ->
         case do_execute(body, env) do
-          {:partial, _env_after, _remaning} ->
+          {:partial, _env_after, _remaining} ->
             {:partial, env, commands}
 
           {:full, env_after} ->
