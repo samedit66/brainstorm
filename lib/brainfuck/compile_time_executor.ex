@@ -7,7 +7,7 @@ defmodule Brainfuck.CompileTimeExecutor do
   Execute Brainfuck commands at compile time.
 
   Execution proceeds until one of the following happens:
-  - the program finishes -> `{:full, env}`
+  - the program finishes -> `{:full, env, []}`
   - an `:in` command is encountered -> `{:partial, env, remaining_commands}`
   - a loop (`{:loop, _}`) is encountered -> `{:partial, env, remaining_commands}`
 
@@ -33,9 +33,10 @@ defmodule Brainfuck.CompileTimeExecutor do
   """
   def execute(commands) do
     do_execute(commands, %{i: 0, tape: %{}, out_queue: []})
+    |> prepare_output()
   end
 
-  defp do_execute([], env), do: {:full, prepare_output(env)}
+  defp do_execute([], env), do: {:full, env}
 
   defp do_execute([:zero | rest], %{i: i, tape: tape} = env) do
     do_execute(rest, %{env | tape: Map.put(tape, i, 0)})
@@ -43,15 +44,16 @@ defmodule Brainfuck.CompileTimeExecutor do
 
   defp do_execute([{:inc, by, offset} | rest], %{i: i, tape: tape} = env) do
     key = i + offset
-    value = Map.get(tape, key, 0)
-    do_execute(rest, %{env | tape: Map.put(tape, key, value + by)})
+    dest_value = Map.get(tape, key, 0)
+    tape = Map.put(tape, key, dest_value + by)
+    do_execute(rest, %{env | tape: tape})
   end
 
   defp do_execute([{:mult, by, offset} | rest], %{i: i, tape: tape} = env) do
-    src = Map.get(tape, i, 0)
-    dest_key = i + offset
-    dest = Map.get(tape, dest_key, 0)
-    tape = Map.put(tape, dest_key, dest + src * by)
+    current_value = Map.get(tape, i, 0)
+    key = i + offset
+    dest_value = Map.get(tape, key, 0)
+    tape = Map.put(tape, key, dest_value + current_value * by)
     do_execute(rest, %{env | tape: tape})
   end
 
@@ -65,28 +67,29 @@ defmodule Brainfuck.CompileTimeExecutor do
   end
 
   defp do_execute([:in | _rest] = commands, env) do
-    {:partial, prepare_output(env), commands}
+    {:partial, env, commands}
   end
 
   defp do_execute([{:loop, body} | rest] = commands, %{i: i, tape: tape} = env) do
-    if Map.get(tape, i, 0) == 0 do
-      do_execute(rest, env)
-    else
-      case do_execute(body, env) do
-        {:partial, _some_env} ->
-          {:partial, prepare_output(env), commands}
+    case Map.get(tape, i, 0) do
+      0 -> do_execute(rest, env)
 
-        {:full, %{i: i, tape: tape} = env_after_iter} ->
-          if Map.get(tape, i, 0) == 0 do
-            do_execute(rest, env_after_iter)
-          else
-            do_execute(commands, env_after_iter)
-          end
-      end
+      _non_zero ->
+        case do_execute(body, env) do
+          {:partial, _env_after, _remaning} ->
+            {:partial, env, commands}
+
+          {:full, env_after} ->
+            do_execute(commands, env_after)
+        end
     end
   end
 
-  defp prepare_output(%{out_queue: out_queue} = env) do
-    %{env | out_queue: Enum.reverse(out_queue)}
+  defp prepare_output({:full, %{out_queue: out_queue} = env}) do
+    {:full, %{env | out_queue: Enum.reverse(out_queue)}}
+  end
+
+  defp prepare_output({:partial, %{out_queue: out_queue} = env, remaining}) do
+    {:partial, %{env | out_queue: Enum.reverse(out_queue)}, remaining}
   end
 end

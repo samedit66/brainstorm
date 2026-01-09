@@ -51,13 +51,14 @@ defmodule Brainfuck.Optimizer do
     # After `fuse` we need to apply peephole optimizations again,
     # because sometimes `fuse` may generate a code like this: `[{:shift, 2}, {:shift, -2}]`.
     # Example: `+[>-<->>+++<<].`.
-    |> fuse([])
-    |> peephole_optimize([])
-    |> unwrap_loops([])
+    |> fuse()
+    |> peephole_optimize()
+    |> unwrap_loops()
   end
 
-  defp peephole_optimize([], optimized),
-    do: Enum.reverse(optimized)
+  defp peephole_optimize(commands), do: peephole_optimize(commands, [])
+
+  defp peephole_optimize([], optimized), do: Enum.reverse(optimized)
 
   defp peephole_optimize([:zero, :in | rest], optimized),
     do: peephole_optimize([:in | rest], optimized)
@@ -118,38 +119,27 @@ defmodule Brainfuck.Optimizer do
     |> Enum.reverse()
   end
 
-  defp fuse([], optimized), do: Enum.reverse(optimized)
+  defp fuse(commands), do: fuse(commands, 0, [])
 
-  defp fuse(
-         [{:shift, offset1}, {:inc, by1, 0} | rest],
-         [{:inc, _by2, offset2} | _optimized_rest] = optimized
-       ) do
-    fuse(rest, [{:inc, by1, offset1 + offset2} | optimized])
+  defp fuse([], cursor, acc), do: Enum.reverse([{:shift, cursor} | acc])
+
+  defp fuse([{:shift, n} | rest], cursor, acc) do
+    fuse(rest, cursor + n, acc)
   end
 
-  defp fuse([{:shift, offset}, {:inc, by, 0} | rest], optimized) do
-    fuse(rest, [{:inc, by, offset} | optimized])
+  defp fuse([{:inc, by, 0} | rest], cursor, acc) do
+    fuse(rest, cursor, [{:inc, by, cursor} | acc])
   end
 
-  defp fuse(
-         [{:loop, _body} | _rest] = commands,
-         [{:inc, _by, offset} | _optimized_rest] = optimized
-       ) do
-    fuse(commands, [{:shift, offset} | optimized])
+  defp fuse([{:loop, body} | rest], cursor, acc) do
+    fuse(rest, 0, [{:loop, fuse(body)}, {:shift, cursor} | acc])
   end
 
-  defp fuse([{:loop, body} | rest], optimized) do
-    fuse(rest, [{:loop, fuse(body, [])} | optimized])
+  defp fuse([other | rest], cursor, acc) do
+    fuse(rest, 0, [other, {:shift, cursor} | acc])
   end
 
-  defp fuse(
-         [command | rest],
-         [{:inc, _by, offset} | _optimized_rest] = optimized
-       ) do
-    fuse(rest, [command, {:shift, offset} | optimized])
-  end
-
-  defp fuse([command | rest], fused), do: fuse(rest, [command | fused])
+  defp unwrap_loops(commands), do: unwrap_loops(commands, [])
 
   defp unwrap_loops([], optimized), do: Enum.reverse(optimized)
 
