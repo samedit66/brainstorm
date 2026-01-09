@@ -11,15 +11,20 @@ This compiler takes Brainfuck code and produces optimized C programs that can be
 ## Quick Example
 
 ```bash
-# Brainfuck source
 $ cat bf_snippets/hello.bf
->+++++++++[<++++++++>-]<.>+++++++[<++++>-]<+.+++++++..+++.>>>++++++++[<++++>-]<.>>>++++++++++[<+++++++++>-]<---.<<<<.+++.------.--------.>>+.>++++++++++.
+# >+++++++++[<++++++++>-]<.>+++++++[<++++>-]<+.+++++++..+++.>>>++++++++[<++++>-]<.>>>++++++++++[<+++++++++>-]<---.<<<<.+++.------.--------.>>+.>++++++++++.
+```
 
-# Compile Brainfuck to C
+### Compile Brainfuck to C
+```bash
 $ ./brainfuck bf_snippets/hello.bf
+```
 
-# The generated C program
-$ cat hello.c
+Now we have `hello.c`.
+
+### The generated C program
+
+```c
 #include <stdio.h>
 
 int main(void) {
