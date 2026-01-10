@@ -91,6 +91,10 @@ defmodule Brainfuck.Optimizer do
   defp peephole_optimize([{:loop, _b1} = first, {:loop, _b2} | rest], optimized),
     do: peephole_optimize([first | rest], optimized)
 
+  defp peephole_optimize([{:loop, [{:inc, by, _offset}]} | rest], optimized) when abs(by) == 1 do
+    peephole_optimize(rest, [{:set, 0} | optimized])
+  end
+
   defp peephole_optimize([{:loop, body} | rest], optimized),
     do:
       peephole_optimize(

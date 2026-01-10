@@ -75,9 +75,6 @@ defmodule Brainfuck.Parser do
   defp do_parse(["," | rest], commands),
     do: do_parse(rest, [:in | commands])
 
-  defp do_parse(["[", "-", "]" | rest], commands),
-    do: do_parse(rest, [{:set, 0} | commands])
-
   defp do_parse(["[" | rest], commands) do
     case extract_loop(rest, [], 1) do
       {:error, reason} ->
