@@ -91,6 +91,11 @@ defmodule Brainfuck.Optimizer do
   defp peephole_optimize([{:loop, _b1} = first, {:loop, _b2} | rest], optimized),
     do: peephole_optimize([first | rest], optimized)
 
+  # The following optimization sometimes may result in an unexpected result:
+  # `-[-].` should cause an infinite loop because all cells are zero, we subtract 1
+  # and get -1 at cell #0. Next goes infinite loop which subtracts until it reaches zero.
+  # This optimization removes this loop and just sets cell #0 to zero.
+  # How to prevent it? Compile with `:o0` level...
   defp peephole_optimize([{:loop, [{:inc, by, _offset}]} | rest], optimized) when abs(by) == 1 do
     peephole_optimize(rest, [{:set, 0} | optimized])
   end
