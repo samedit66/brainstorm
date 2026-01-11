@@ -38,7 +38,7 @@ defmodule Brainfuck.Parser do
       {:ok, [loop: []]}
 
       iex> Brainfuck.Parser.parse("[-]")
-      {:ok, [set: 0]}
+      {:ok, [{:loop, [{:inc, -1, 0}]}]}
 
       iex> Brainfuck.Parser.parse("This will be deleted")
       {:ok, []}

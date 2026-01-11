@@ -22,10 +22,19 @@ defmodule Brainfuck.Compiler do
 
   Returns `{:ok, c_source, exec_result}` on success, or `{:error, reason}`.
   """
-  def compile(code, opt_level \\ :o2) when is_binary(code) do
+  def compile(code, opts \\ []) when is_binary(code) do
+    opl_level = Keyword.get(opts, :opl_level, :o2)
+    max_loop_steps = Keyword.get(opts, :max_loop_steps, 1024)
+
     with {:ok, commands} <- Parser.parse(code) do
-      optimized = Optimizer.optimize(commands, opt_level)
-      exec_result = CompileTimeExecutor.execute(optimized)
+      optimized = Optimizer.optimize(commands, opl_level)
+
+      exec_result =
+        CompileTimeExecutor.execute(
+          optimized,
+          max_loop_steps: max_loop_steps
+        )
+
       c_source = BackendC.generate(exec_result)
       {:ok, c_source, exec_result}
     else
