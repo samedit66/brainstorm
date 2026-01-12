@@ -96,6 +96,8 @@ defmodule Brainfuck.Optimizer do
   # and get -1 at cell #0. Next goes infinite loop which subtracts until it reaches zero.
   # This optimization removes this loop and just sets cell #0 to zero.
   # How to prevent it? Compile with `:o0` level...
+  # UPDATE 13.01.2026: found out that any Brainfuck implemntation
+  # should set cell to 0 when overflow happens.
   defp peephole_optimize([{:loop, [{:inc, by, _offset}]} | rest], optimized) when abs(by) == 1 do
     peephole_optimize(rest, [{:set, 0} | optimized])
   end
@@ -134,7 +136,7 @@ defmodule Brainfuck.Optimizer do
   defp fuse([], optimized, 0), do: Enum.reverse(optimized)
 
   defp fuse([], optimized, cursor) do
-     Enum.reverse([{:shift, cursor} | optimized])
+    Enum.reverse([{:shift, cursor} | optimized])
   end
 
   defp fuse([{:shift, offset} | rest], optimized, cursor) do
