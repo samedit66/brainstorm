@@ -1,0 +1,1 @@
+- `Backend.C`: add proper rendering for scan command

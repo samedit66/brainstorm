@@ -171,6 +171,12 @@ defmodule Brainfuck.Backend.C do
     [open] ++ body ++ [close]
   end
 
+  defp render_cmd({:scan, n}, level) do
+    # Currently, I do not want to implement this in an efficeint way...
+    # Nonetheless, I plan to do it soon
+    render_cmd({:loop, [shift: n]}, level)
+  end
+
   defp index_expr(0), do: "i"
   defp index_expr(offset) when offset > 0, do: "i + #{offset}"
   defp index_expr(offset) when offset < 0, do: "i - #{abs(offset)}"

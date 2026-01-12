@@ -66,6 +66,7 @@ defmodule Brainfuck.Optimizer do
     |> peephole_optimize()
     |> unwrap_loops()
     |> peephole_optimize()
+    |> scan_loops()
   end
 
   defp peephole_optimize(commands), do: peephole_optimize(commands, [])
@@ -212,5 +213,18 @@ defmodule Brainfuck.Optimizer do
       _ ->
         :failed
     end
+  end
+
+  def scan_loops(commands) do
+    commands
+    |> Enum.map(fn command ->
+      case command do
+        {:loop, [shift: n]} ->
+          {:scan, n}
+
+        _ ->
+          command
+      end
+    end)
   end
 end

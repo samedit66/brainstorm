@@ -57,6 +57,16 @@ defmodule Brainfuck.CompileTimeExecutor do
 
   defp do_execute([], state), do: {:full, state}
 
+  defp do_execute([{:scan, n} | rest] = commands, %{i: i, tape: tape} = state) do
+    dest_key = i + n
+
+    if Map.get(tape, dest_key, 0) do
+      do_execute(rest, %{state | i: dest_key})
+    else
+      do_execute(commands, %{state | i: dest_key})
+    end
+  end
+
   defp do_execute([{:set, value} | rest], %{i: i, tape: tape} = state) do
     do_execute(rest, %{state | tape: Map.put(tape, i, value)})
   end
