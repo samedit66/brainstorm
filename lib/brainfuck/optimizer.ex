@@ -27,6 +27,17 @@ defmodule Brainfuck.Optimizer do
       iex> Brainfuck.Optimizer.optimize([{:inc, 10, 0}, {:inc, -4, 0}], :o1)
       [{:inc, 6, 0}]
 
+      iex> Brainfuck.Optimizer.optimize([
+      ...>   {:inc, 1, 0},
+      ...>   {:loop, [
+      ...>     {:inc, -1, 0},
+      ...>     {:shift, 1}, {:inc, 8, 0},
+      ...>     {:shift, -2}, {:inc, -2, 0},
+      ...>     {:shift, 1}
+      ...>   ]}
+      ...> ], :o2)
+      [{:inc, 1, 0}, {:div, 2, -1}, {:mult, 8, 1}, {:set, 0}]
+
   Note that if you run default `optimize` (with `:o2` opt-level) on the code
   which has no IO, you won't see anything:
 
@@ -160,12 +171,12 @@ defmodule Brainfuck.Optimizer do
   defp unwrap_loops([], optimized), do: Enum.reverse(optimized)
 
   defp unwrap_loops([{:loop, body} | rest], optimized) do
-    case parse_mults(body) do
+    case parse_mults_and_divs(body) do
       :failed ->
         unwrap_loops(rest, [{:loop, unwrap_loops(body, [])} | optimized])
 
-      {:ok, mults} ->
-        unwrap_loops(rest, [{:set, 0}] ++ mults ++ optimized)
+      {:ok, mults, divs} ->
+        unwrap_loops(rest, [{:set, 0}] ++ mults ++ divs ++ optimized)
     end
   end
 
@@ -173,25 +184,30 @@ defmodule Brainfuck.Optimizer do
     unwrap_loops(rest, [command | optimized])
   end
 
-  defp parse_mults(commands) do
+  defp parse_mults_and_divs(commands) do
     {candidates, others} =
       commands
       |> Enum.split_with(&match?({:inc, _by, _offset}, &1))
 
     {decrements, increments} =
       candidates
-      |> Enum.split_with(&match?({:inc, -1, 0}, &1))
+      |> Enum.split_with(fn {:inc, by, _offset} -> by < 0 end)
 
-    # A multiplication loop consists only of:
-    # - only one decrement
-    # - one or more increment of some cell
-    case {others, decrements, increments} do
-      {[], [_decrement], [_first | _rest]} ->
-        {
-          :ok,
+    {loop_decrement, other_decrements} =
+      decrements
+      |> Enum.split_while(&match?({:inc, -1, 0}, &1))
+
+    case {others, loop_decrement, other_decrements, increments} do
+      {[], [_decrement], [_x | _xs], [_y | _ys]} ->
+        mults =
           increments
           |> Enum.map(fn {:inc, by, offset} -> {:mult, by, offset} end)
-        }
+
+        divs =
+          other_decrements
+          |> Enum.map(fn {:inc, by, offset} -> {:div, abs(by), offset} end)
+
+        {:ok, mults, divs}
 
       _ ->
         :failed

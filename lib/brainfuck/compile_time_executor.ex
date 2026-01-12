@@ -76,6 +76,14 @@ defmodule Brainfuck.CompileTimeExecutor do
     do_execute(rest, %{state | tape: tape})
   end
 
+  defp do_execute([{:div, by, offset} | rest], %{i: i, tape: tape} = state) do
+    current_value = Map.get(tape, i, 0)
+    key = i + offset
+    dest_value = Map.get(tape, key, 0)
+    tape = Map.put(tape, key, dest_value + current_value / by)
+    do_execute(rest, %{state | tape: tape})
+  end
+
   defp do_execute([{:shift, offset} | rest], %{i: i} = state) do
     do_execute(rest, %{state | i: i + offset})
   end

@@ -58,7 +58,8 @@ defmodule Brainfuck.Backend.C do
 
   defp parse_to_fputs(out_queue) do
     case parse_as_c_literal(out_queue) do
-      {:string, "\"\""} -> []
+      {:string, "\"\""} ->
+        []
 
       {:string, string} ->
         ["fputs(#{string}, stdout);"]
@@ -148,6 +149,17 @@ defmodule Brainfuck.Backend.C do
       if by > 0,
         do: "arr[#{idx}] += arr[i] * #{by};",
         else: "arr[#{idx}] -= arr[i] * #{abs(by)};"
+
+    [indent(line, level)]
+  end
+
+  defp render_cmd({:div, by, offset}, level) do
+    idx = index_expr(offset)
+
+    line =
+      if by > 0,
+        do: "arr[#{idx}] += arr[i] / #{by};",
+        else: "arr[#{idx}] -= arr[i] / #{abs(by)};"
 
     [indent(line, level)]
   end
