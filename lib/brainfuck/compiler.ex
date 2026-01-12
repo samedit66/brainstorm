@@ -57,7 +57,7 @@ defmodule Brainfuck.Compiler do
 
     result =
       with {:ok, source} <- File.read(bf_file),
-           {:ok, c_source, exec_result} <- compile(source, opt_level),
+           {:ok, c_source, exec_result} <- compile(source, opt_level: opt_level),
            :ok <- File.mkdir_p(out_dir),
            base <- Path.rootname(Path.basename(bf_file)),
            c_file <- Path.join(out_dir, base <> ".c"),
