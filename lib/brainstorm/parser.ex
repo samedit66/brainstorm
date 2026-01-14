@@ -29,10 +29,10 @@ defmodule Brainstorm.Parser do
       {:ok, [shift: -1]}
 
       iex> Brainstorm.Parser.parse(".")
-      {:ok, [:out]}
+      {:ok, [out: 0]}
 
       iex> Brainstorm.Parser.parse(",")
-      {:ok, [:in]}
+      {:ok, [in: 0]}
 
       iex> Brainstorm.Parser.parse("[]")
       {:ok, [loop: []]}
@@ -70,10 +70,10 @@ defmodule Brainstorm.Parser do
   defp do_parse([], commands), do: Enum.reverse(commands)
 
   defp do_parse(["." | rest], commands),
-    do: do_parse(rest, [:out | commands])
+    do: do_parse(rest, [{:out, 0} | commands])
 
   defp do_parse(["," | rest], commands),
-    do: do_parse(rest, [:in | commands])
+    do: do_parse(rest, [{:in, 0} | commands])
 
   defp do_parse(["[" | rest], commands) do
     case extract_loop(rest, [], 1) do

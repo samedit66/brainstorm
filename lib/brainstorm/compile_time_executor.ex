@@ -8,7 +8,7 @@ defmodule Brainstorm.CompileTimeExecutor do
 
   Execution proceeds until one of the following happens:
   - the program finishes -> `{:full, state}`
-  - an `:in` command is encountered -> `{:partial, state, remaining_commands}`
+  - an `{:in, offset}` command is encountered -> `{:partial, state, remaining_commands}`
   - a loop that cannot be fully executed at compile time -> `{:partial, state, remaining_commands}`
 
   The returned `state` contains `:i` (current tape position),
@@ -98,12 +98,12 @@ defmodule Brainstorm.CompileTimeExecutor do
     do_execute(rest, %{state | i: i + offset})
   end
 
-  defp do_execute([:out | rest], %{i: i, tape: tape, out_queue: out_queue} = state) do
-    value = Map.get(tape, i, 0)
+  defp do_execute([{:out, offset} | rest], %{i: i, tape: tape, out_queue: out_queue} = state) do
+    value = Map.get(tape, i + offset, 0)
     do_execute(rest, %{state | out_queue: [value | out_queue]})
   end
 
-  defp do_execute([:in | _rest] = commands, state) do
+  defp do_execute([{:in, _offset} | _rest] = commands, state) do
     {:partial, state, commands}
   end
 

@@ -27,16 +27,17 @@ defmodule Brainstorm.Optimizer do
       iex> Brainstorm.Optimizer.optimize([{:inc, 10, 0}, {:inc, -4, 0}], :o1)
       [{:inc, 6, 0}]
 
-      iex> Brainfuck.Optimizer.optimize([
+      iex> Brainstorm.Optimizer.optimize([
       ...>   {:inc, 1, 0},
       ...>   {:loop, [
       ...>     {:inc, -1, 0},
       ...>     {:shift, 1}, {:inc, 8, 0},
       ...>     {:shift, -2}, {:inc, -2, 0},
       ...>     {:shift, 1}
-      ...>   ]}
+      ...>   ]},
+      ...>   {:out, 0}
       ...> ], :o2)
-      [{:inc, 1, 0}, {:div, 2, -1}, {:mult, 8, 1}, {:set, 0}]
+      [{:inc, 1, 0}, {:div, 2, -1}, {:mult, 8, 1}, {:set, 0}, {:out, 0}]
 
   Note that if you run default `optimize` (with `:o2` opt-level) on the code
   which has no IO, you won't see anything:
@@ -73,8 +74,8 @@ defmodule Brainstorm.Optimizer do
 
   defp peephole_optimize([], optimized), do: Enum.reverse(optimized)
 
-  defp peephole_optimize([{:set, 0}, :in | rest], optimized),
-    do: peephole_optimize([:in | rest], optimized)
+  defp peephole_optimize([{:set, 0}, {:in, 0} | rest], optimized),
+    do: peephole_optimize([{:in, 0} | rest], optimized)
 
   defp peephole_optimize([{:set, 0}, {:inc, by, 0} | rest], optimized),
     do: peephole_optimize([{:set, by} | rest], optimized)
@@ -91,8 +92,8 @@ defmodule Brainstorm.Optimizer do
   defp peephole_optimize([{:inc, 0, 0} | rest], optimized),
     do: peephole_optimize(rest, optimized)
 
-  defp peephole_optimize([{:inc, _n, 0}, :in | rest], optimized),
-    do: peephole_optimize([:in | rest], optimized)
+  defp peephole_optimize([{:inc, _n, 0}, {:in, 0} | rest], optimized),
+    do: peephole_optimize([{:in, 0} | rest], optimized)
 
   defp peephole_optimize([{:shift, 0} | rest], optimized),
     do: peephole_optimize(rest, optimized)
@@ -134,8 +135,8 @@ defmodule Brainstorm.Optimizer do
     commands
     |> Enum.reverse()
     |> Enum.drop_while(fn
-      :in -> false
-      :out -> false
+      {:in, _offset} -> false
+      {:out, _offset} -> false
       # TODO: add a check that a loop is dead
       {:loop, _body} -> false
       _ -> true
@@ -161,6 +162,14 @@ defmodule Brainstorm.Optimizer do
 
   defp fuse([{:loop, body} | rest], optimized, cursor) do
     fuse(rest, [{:loop, fuse(body)}, {:shift, cursor} | optimized], 0)
+  end
+
+  defp fuse([{:out, 0} | rest], optimized, cursor) do
+    fuse(rest, [{:out, cursor} | optimized], cursor)
+  end
+
+  defp fuse([{:in, 0} | rest], optimized, cursor) do
+    fuse(rest, [{:in, cursor} | optimized], cursor)
   end
 
   defp fuse([command | rest], optimized, cursor) do

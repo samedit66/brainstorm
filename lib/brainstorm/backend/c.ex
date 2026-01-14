@@ -109,9 +109,13 @@ defmodule Brainstorm.Backend.C do
     Enum.flat_map(commands, &render_cmd(&1, level))
   end
 
-  defp render_cmd(:out, level), do: [indent("putchar(arr[i]);", level)]
+  defp render_cmd({:out, offset}, level) do
+    [indent("putchar(arr[#{index_expr(offset)}]);", level)]
+  end
 
-  defp render_cmd(:in, level), do: [indent("arr[i] = getchar();", level)]
+  defp render_cmd({:in, offset}, level) do
+    [indent("arr[#{index_expr(offset)}] = getchar();", level)]
+  end
 
   defp render_cmd({:set, value}, level), do: [indent("arr[i] = #{value};", level)]
 
