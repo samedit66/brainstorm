@@ -1,4 +1,4 @@
-defmodule Brainfuck.Parser do
+defmodule Brainstorm.Parser do
   @tokens [
     ">",
     "<",
@@ -16,42 +16,42 @@ defmodule Brainfuck.Parser do
 
   ## Examples
 
-      iex> Brainfuck.Parser.parse("+")
+      iex> Brainstorm.Parser.parse("+")
       {:ok, [{:inc, 1, 0}]}
 
-      iex> Brainfuck.Parser.parse("-")
+      iex> Brainstorm.Parser.parse("-")
       {:ok, [{:inc, -1, 0}]}
 
-      iex> Brainfuck.Parser.parse(">")
+      iex> Brainstorm.Parser.parse(">")
       {:ok, [shift: 1]}
 
-      iex> Brainfuck.Parser.parse("<")
+      iex> Brainstorm.Parser.parse("<")
       {:ok, [shift: -1]}
 
-      iex> Brainfuck.Parser.parse(".")
+      iex> Brainstorm.Parser.parse(".")
       {:ok, [:out]}
 
-      iex> Brainfuck.Parser.parse(",")
+      iex> Brainstorm.Parser.parse(",")
       {:ok, [:in]}
 
-      iex> Brainfuck.Parser.parse("[]")
+      iex> Brainstorm.Parser.parse("[]")
       {:ok, [loop: []]}
 
-      iex> Brainfuck.Parser.parse("[-]")
+      iex> Brainstorm.Parser.parse("[-]")
       {:ok, [{:loop, [{:inc, -1, 0}]}]}
 
-      iex> Brainfuck.Parser.parse("This will be deleted")
+      iex> Brainstorm.Parser.parse("This will be deleted")
       {:ok, []}
 
-      iex> Brainfuck.Parser.parse("here we go: +++[->+<]")
+      iex> Brainstorm.Parser.parse("here we go: +++[->+<]")
       {:ok, [{:inc, 3, 0}, {:loop, [{:inc, -1, 0}, {:shift, 1}, {:inc, 1, 0}, {:shift, -1}]}]}
 
   Invalid brainfuck code results in an error:
 
-      iex> Brainfuck.Parser.parse("[")
+      iex> Brainstorm.Parser.parse("[")
       {:error, "At least one loop is not closed properly."}
 
-      iex> Brainfuck.Parser.parse("]")
+      iex> Brainstorm.Parser.parse("]")
       {:error, "Missing loop start."}
 
   """

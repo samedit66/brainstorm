@@ -1,4 +1,4 @@
-defmodule Brainfuck.Compiler do
+defmodule Brainstorm.Compiler do
   @moduledoc """
   High-level compiler for Brainfuck programs.
 
@@ -6,10 +6,10 @@ defmodule Brainfuck.Compiler do
   when possible, and generates a C program.
   """
 
-  alias Brainfuck.Parser
-  alias Brainfuck.Optimizer
-  alias Brainfuck.CompileTimeExecutor
-  alias Brainfuck.Backend.C, as: BackendC
+  alias Brainstorm.Parser
+  alias Brainstorm.Optimizer
+  alias Brainstorm.CompileTimeExecutor
+  alias Brainstorm.Backend.C, as: BackendC
 
   @doc """
   Compile Brainfuck source code into C.

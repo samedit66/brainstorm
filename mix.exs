@@ -3,12 +3,12 @@ defmodule Brainfuck.MixProject do
 
   def project do
     [
-      app: :brainfuck,
+      app: :bs,
       version: "0.1.0",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      escript: [main_module: Brainfuck.CLI]
+      escript: [main_module: Brainstorm.CLI]
     ]
   end
 

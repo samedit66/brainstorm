@@ -1,4 +1,4 @@
-defmodule Brainfuck.Optimizer do
+defmodule Brainstorm.Optimizer do
   @doc """
   Optimizes given `commands`.
   The following optimization techniques are used:
@@ -24,7 +24,7 @@ defmodule Brainfuck.Optimizer do
 
   ## Examples
 
-      iex> Brainfuck.Optimizer.optimize([{:inc, 10, 0}, {:inc, -4, 0}], :o1)
+      iex> Brainstorm.Optimizer.optimize([{:inc, 10, 0}, {:inc, -4, 0}], :o1)
       [{:inc, 6, 0}]
 
       iex> Brainfuck.Optimizer.optimize([
@@ -41,7 +41,7 @@ defmodule Brainfuck.Optimizer do
   Note that if you run default `optimize` (with `:o2` opt-level) on the code
   which has no IO, you won't see anything:
 
-      iex> Brainfuck.Optimizer.optimize([{:inc, 10, 0}, {:inc, -4, 0}])
+      iex> Brainstorm.Optimizer.optimize([{:inc, 10, 0}, {:inc, -4, 0}])
       []
 
   That's intentional: no IO happens, no interactions with user, no computations performed.

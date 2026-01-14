@@ -1,4 +1,4 @@
-defmodule Brainfuck.Backend.C do
+defmodule Brainstorm.Backend.C do
   @moduledoc """
   Generate a C program.
   """

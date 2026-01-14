@@ -1,4 +1,4 @@
-defmodule Brainfuck.CompileTimeExecutor do
+defmodule Brainstorm.CompileTimeExecutor do
   @moduledoc """
   Executes some of Brainfuck commands at compile time.
   """
@@ -17,16 +17,16 @@ defmodule Brainfuck.CompileTimeExecutor do
 
   ## Examples
 
-      iex> Brainfuck.CompileTimeExecutor.execute([:out])
+      iex> Brainstorm.CompileTimeExecutor.execute([:out])
       {:full, %{i: 0, tape: %{}, out_queue: [0]}}
 
-      iex> Brainfuck.CompileTimeExecutor.execute([:in])
+      iex> Brainstorm.CompileTimeExecutor.execute([:in])
       {:partial, %{i: 0, tape: %{}, out_queue: []}, [:in]}
 
-      iex> Brainfuck.CompileTimeExecutor.execute([{:loop, []}])
+      iex> Brainstorm.CompileTimeExecutor.execute([{:loop, []}])
       {:full, %{i: 0, tape: %{}, out_queue: []}}
 
-      iex> Brainfuck.CompileTimeExecutor.execute([
+      iex> Brainstorm.CompileTimeExecutor.execute([
       ...>   {:inc, 2, 0},
       ...>   {:mult, 3, 1},
       ...>   {:shift, 1},
@@ -34,10 +34,10 @@ defmodule Brainfuck.CompileTimeExecutor do
       ...> ])
       {:full, %{i: 1, tape: %{0 => 2, 1 => 6}, out_queue: [6]}}
 
-      iex> Brainfuck.CompileTimeExecutor.execute([{:set, 3}, {:loop, [:out, {:inc, -1, 0}]}])
+      iex> Brainstorm.CompileTimeExecutor.execute([{:set, 3}, {:loop, [:out, {:inc, -1, 0}]}])
       {:full, %{i: 0, tape: %{0 => 0}, out_queue: [3, 2, 1]}}
 
-      iex> Brainfuck.CompileTimeExecutor.execute([{:set, 1300}, {:loop, [{:inc, -1, 0}]}])
+      iex> Brainstorm.CompileTimeExecutor.execute([{:set, 1300}, {:loop, [{:inc, -1, 0}]}])
       {:partial, %{i: 0, tape: %{0 => 276}, out_queue: []}, [{:loop, [{:inc, -1, 0}]}]}
 
   """

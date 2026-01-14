@@ -1,4 +1,4 @@
-defmodule Brainfuck.CompileTimeExecutorTest do
+defmodule Brainstorm.CompileTimeExecutorTest do
   use ExUnit.Case, async: true
-  doctest(Brainfuck.CompileTimeExecutor)
+  doctest(Brainstorm.CompileTimeExecutor)
 end

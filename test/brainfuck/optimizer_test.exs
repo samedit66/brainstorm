@@ -1,4 +1,4 @@
-defmodule Brainfuck.OptimizerTest do
+defmodule Brainstorm.OptimizerTest do
   use ExUnit.Case, async: true
-  doctest(Brainfuck.Optimizer)
+  doctest(Brainstorm.Optimizer)
 end

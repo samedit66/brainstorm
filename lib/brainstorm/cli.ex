@@ -1,7 +1,7 @@
-defmodule Brainfuck.CLI do
-  alias Brainfuck.Compiler
+defmodule Brainstorm.CLI do
+  alias Brainstorm.Compiler
 
-  @compiler_name "brainfuck"
+  @compiler_name "bs"
   @no_input_message "No input file provided.\n\nUsage: #{@compiler_name} <file.bf> [-O0|O1|O2] [--outdir <dir>]"
 
   def main(args \\ []) do

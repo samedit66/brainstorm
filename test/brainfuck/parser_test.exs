@@ -1,4 +1,4 @@
-defmodule Brainfuck.ParserTest do
+defmodule Brainstorm.ParserTest do
   use ExUnit.Case, async: true
-  doctest(Brainfuck.Parser)
+  doctest(Brainstorm.Parser)
 end
