@@ -1,10 +1,10 @@
-# Brainfuck Compiler
+# brainstorm
 
-An **optimized compiler for Brainfuck**, written in Elixir.  
+An **optimizing compiler for Brainfuck**, written in Elixir.  
 
 I love compilers and Elixir, but I didn’t want to write a huge parser or tokenizer and die from boredom. Brainfuck is small, simple, and lets me focus entirely on optimizations.  
 
-This compiler takes Brainfuck code and produces optimized C programs that can be compiled and run.  
+`brainstorm` takes Brainfuck code and produces optimized C programs that can be compiled and run.  
 
 ---
 
@@ -17,7 +17,7 @@ $ cat bf_snippets/hello.bf
 
 ### Compile Brainfuck to C
 ```bash
-$ ./brainfuck bf_snippets/hello.bf
+$ ./bs bf_snippets/hello.bf
 ```
 
 Now we have `hello.c`.
@@ -46,7 +46,7 @@ gcc -o hello hello.c
 
 ## Optimizations
 
-The compiler applies several optimization techniques to make Brainfuck code faster and more readable in the generated C:
+`brainstorm` supports a wide range of common Brainfuck optimizations, including nearly all of the techniques described in the notable article [brainfuck optimization strategies](http://calmerthanyouare.org/2015/01/07/optimizing-brainfuck.html).
 
 - **Combine sequential increments/decrements**  
   `+++--` becomes `+`.
@@ -95,10 +95,10 @@ You can control which optimizations are applied using the `opt_level` argument:
 ## Installation
 
 ```bash
-git clone https://github.com/samedit66/brainfuck.git
-cd brainfuck
+git clone https://github.com/samedit66/brainstorm.git
+cd brainstorm
 mix escript.build
-./brainfuck
+./bs
 ```
 
 ---
@@ -106,7 +106,7 @@ mix escript.build
 ## Usage
 
 ```bash
-./brainfuck <file.bf> [--opt-level 0|1|2] [--outdir <dir>]
+./bs <file.bf> [--opt-level 0|1|2] [--outdir <dir>]
 ```
 
 **Options:**
