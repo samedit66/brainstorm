@@ -224,16 +224,17 @@ defmodule Brainstorm.Optimizer do
     end
   end
 
-  def scan_loops(commands) do
-    commands
-    |> Enum.map(fn command ->
-      case command do
-        {:loop, [shift: n]} ->
-          {:scan, n}
+  defp scan_loops(commands), do: scan_loops(commands, [])
 
-        _ ->
-          command
-      end
-    end)
+  defp scan_loops([], optimized), do: Enum.reverse(optimized)
+
+  defp scan_loops([{:loop, [shift: n]} | rest], optimized) do
+    scan_loops(rest, [{:scan, n} | optimized])
   end
+
+  defp scan_loops([{:loop, body} | rest], optimized) do
+    scan_loops(rest, [{:loop, scan_loops(body)} | optimized])
+  end
+
+  defp scan_loops([command | rest], optimized), do: scan_loops(rest, [command | optimized])
 end
