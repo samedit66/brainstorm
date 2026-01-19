@@ -208,7 +208,7 @@ defmodule Brainstorm.Optimizer do
       |> Enum.split_while(&match?({:inc, -1, 0}, &1))
 
     case {others, loop_decrement, other_decrements, increments} do
-      {[], [_decrement], [_x | _xs], [_y | _ys]} ->
+      {[], [_decrement], _decrements, _increments} ->
         mults =
           increments
           |> Enum.map(fn {:inc, by, offset} -> {:mult, by, offset} end)
