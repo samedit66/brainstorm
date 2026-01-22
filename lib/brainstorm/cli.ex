@@ -29,18 +29,14 @@ defmodule Brainstorm.CLI do
       OptionParser.parse(
         args,
         aliases: [O: :opt_level, o: :opt_level],
-        strict: [opt_level: :integer, outdir: :string, mode: :string, max_steps: :integer]
+        strict: [opt_level: :integer, outdir: :string, mode: :string, max_steps: :string]
       )
 
-    opt_level = Keyword.get(opts, :opt_level, 2)
-    out_dir = Keyword.get(opts, :outdir, ".")
-    exec_mode = Keyword.get(opts, :mode, "i")
-    max_steps = Keyword.get(opts, :max_steps, 8192)
-
     with {:ok, file} <- parse_input_file(files),
-         {:ok, opt_level} <- parse_opt_level(opt_level),
-         {:ok, mode} <- parse_exec_mode(exec_mode),
-         {:ok, max_steps} <- parse_max_steps(max_steps) do
+         {:ok, out_dir} <- parse_out_dir(opts[:out_dir]),
+         {:ok, opt_level} <- parse_opt_level(opts[:opt_level]),
+         {:ok, mode} <- parse_exec_mode(opts[:mode]),
+         {:ok, max_steps} <- parse_max_steps(opts[:max_steps]) do
       {:ok, {file, opt_level, out_dir, mode, max_steps}}
     end
   end
@@ -48,6 +44,10 @@ defmodule Brainstorm.CLI do
   defp parse_input_file([]), do: {:error, @no_input_message}
   defp parse_input_file([first | _rest]), do: {:ok, first}
 
+  defp parse_out_dir(nil), do: {:ok, "."}
+  defp parse_out_dir(dir), do: {:ok, dir}
+
+  defp parse_opt_level(nil), do: {:ok, :o2}
   defp parse_opt_level(0), do: {:ok, :o0}
   defp parse_opt_level(1), do: {:ok, :o1}
   defp parse_opt_level(2), do: {:ok, :o2}
@@ -64,6 +64,7 @@ defmodule Brainstorm.CLI do
          -O2   full optimizations
        """}
 
+  defp parse_exec_mode(nil), do: {:ok, :int}
   defp parse_exec_mode("i"), do: {:ok, :int}
   defp parse_exec_mode("c"), do: {:ok, :comp}
 
@@ -78,12 +79,19 @@ defmodule Brainstorm.CLI do
          i   interpretation
        """}
 
-  defp parse_max_steps(max_steps) when max_steps > 0, do: {:ok, max_steps}
+  defp parse_max_steps(nil), do: {:ok, 8192}
+  defp parse_max_steps("infinity"), do: {:ok, :infinity}
 
-  defp parse_max_steps(_other),
-    do:
-      {:error,
-       """
-       Invalid max steps: must be a positive integer
-       """}
+  defp parse_max_steps(max_steps) do
+    case Integer.parse(max_steps) do
+      {number, _tail} when number > 0 ->
+        {:ok, number}
+
+      :error ->
+        {:error,
+         """
+         Invalid max steps: must be a positive integer or infinity
+         """}
+    end
+  end
 end

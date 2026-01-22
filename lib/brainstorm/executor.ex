@@ -44,7 +44,7 @@ defmodule Brainstorm.Executor do
          commands,
          %{steps: steps, max_steps: max_steps, mode: :comp} = state
        )
-       when steps >= max_steps do
+       when max_steps != :infinity and steps >= max_steps do
     {:stop, state, commands}
   end
 

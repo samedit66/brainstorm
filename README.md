@@ -87,7 +87,7 @@ gcc -o hello hello.c
 
 - **Compile-time execution**
 
-  `brainstorm` tries to execute code at compile-time as much as possible. To prevent an infinite time of compilation due to an unexpected infinite loop, `brainstorm` supports specifying steps limit - how many commands are allowed to be executed at compile-time. It defaults to `8192` and can be changed via `--max-steps` CLI argument.
+  `brainstorm` tries to execute code at compile-time as much as possible. To prevent an infinite time of compilation due to an unexpected infinite loop, `brainstorm` supports specifying steps limit - how many commands are allowed to be executed at compile-time. It defaults to `8192` and can be changed via `--max-steps` CLI argument. If you are risky enough, you can specify `--max-steps infinity` and wait as long as you want.
 
 ---
 
