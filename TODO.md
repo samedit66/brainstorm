@@ -1,1 +1,3 @@
 - `Backend.C`: add proper rendering for scan command
+- Add proper error messages with line pos/column pos
+- Test cases

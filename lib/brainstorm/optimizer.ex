@@ -68,6 +68,7 @@ defmodule Brainstorm.Optimizer do
     |> unwrap_loops()
     |> peephole_optimize()
     |> scan_loops()
+    |> peephole_optimize()
   end
 
   defp peephole_optimize(commands), do: peephole_optimize(commands, [])

@@ -1,95 +1,92 @@
 defmodule Brainstorm.Compiler do
-  @moduledoc """
-  High-level compiler for Brainfuck programs.
+  alias Brainstorm.{Parser, Optimizer, Executor}
 
-  Parses source code, applies optimizations, executes code at compile time
-  when possible, and generates a C program.
-  """
-
-  alias Brainstorm.Parser
-  alias Brainstorm.Optimizer
-  alias Brainstorm.CompileTimeExecutor
-  alias Brainstorm.Backend.C, as: BackendC
-
-  @doc """
-  Compile Brainfuck source code into C.
-
-  The pipeline is:
-    1. Parse Brainfuck source
-    2. Optimize the AST
-    3. Execute some code at compile time (if possible)
-    4. Generate C code
-
-  Returns `{:ok, c_source, exec_result}` on success, or `{:error, reason}`.
-  """
-  def compile(code, opts \\ []) when is_binary(code) do
-    opl_level = Keyword.get(opts, :opl_level, :o2)
-    max_loop_steps = Keyword.get(opts, :max_loop_steps, 1024)
-
-    with {:ok, commands} <- Parser.parse(code) do
-      optimized = Optimizer.optimize(commands, opl_level)
-
-      exec_result =
-        CompileTimeExecutor.execute(
-          optimized,
-          max_loop_steps: max_loop_steps
-        )
-
-      c_source = BackendC.generate(exec_result)
-      {:ok, c_source, exec_result}
-    else
-      {:error, reason} ->
-        {:error, reason}
+  def interpret(file_path, opt_level, max_steps) do
+    with {:ok, bf_code} <- read_input_file(file_path),
+         {:ok, parsed} <- parse(bf_code),
+         optimized <- Optimizer.optimize(parsed, opt_level),
+         :ok <- execute(optimized, :int, max_steps) do
+      :ok
     end
   end
 
-  @doc """
-  Compile a `.bf` file and save the generated C source.
-
-  Options:
-    * `:opt_level` – optimizer level (default: `:o2`)
-    * `:out_dir` – output directory for the `.c` file
-      (default: same directory as the input file)
-  """
-  def compile_file(bf_file, opts \\ []) when is_binary(bf_file) do
-    opt_level = Keyword.get(opts, :opt_level, :o2)
-    out_dir = Keyword.get(opts, :out_dir, Path.dirname(bf_file))
-
-    result =
-      with {:ok, source} <- File.read(bf_file),
-           {:ok, c_source, exec_result} <- compile(source, opt_level: opt_level),
-           :ok <- File.mkdir_p(out_dir),
-           base <- Path.rootname(Path.basename(bf_file)),
-           c_file <- Path.join(out_dir, base <> ".c"),
-           :ok <- File.write(c_file, c_source) do
-        {:ok, c_file, exec_result}
-      end
-
-    normalize_compile_result(result, bf_file)
+  def compile(file_path, backend, ext, out_dir, opt_level, max_steps) do
+    with {:ok, bf_code} <- read_input_file(file_path),
+         {:ok, parsed} <- parse(bf_code),
+         optimized <- optimize(parsed, opt_level),
+         {:ok, compiled} <- execute(optimized, :comp, max_steps),
+         program <- backend.(compiled),
+         :ok <- create_out_dir(out_dir),
+         output_file <- output_file_path(file_path, ext, out_dir),
+         :ok <- write_output_file(output_file, program) do
+      :ok
+    end
   end
 
-  defp normalize_compile_result({:ok, _path, _exec} = ok, _bf_file),
-    do: ok
+  defp read_input_file(file_path) do
+    case File.read(file_path) do
+      {:ok, content} ->
+        {:ok, content}
 
-  defp normalize_compile_result({:error, reason}, bf_file),
-    do: {:error, format_compile_error(bf_file, reason)}
+      {:error, reason} ->
+        {:error, "I couldn't read from '#{file_path}': #{:file.format_error(reason)}"}
+    end
+  end
 
-  defp format_compile_error(bf_file, reason) do
-    """
-    ✖ Brainfuck compilation failed
+  defp parse(bf_code) do
+    case Parser.parse(bf_code) do
+      {:ok, parsed} ->
+        {:ok, parsed}
 
-    File:
-      #{bf_file}
+      {:error, :missing_loop_start} ->
+        {:error, "I noticed an unexpected right bracket"}
 
-    What happened:
-      #{inspect(reason)}
+      {:error, :unclosed_loop} ->
+        {:error, "I noticed some of loop was not closed properly with a right bracket"}
+    end
+  end
 
-    Hints:
-      • Check the Brainfuck syntax
-      • Make sure the output directory is writable
-      • Try a lower optimization level (:o0 or :o1)
+  defp optimize(commands, opt_level) do
+    Optimizer.optimize(commands, opt_level)
+  end
 
-    Don’t worry — the compiler believes in you 🙂
-    """
+  defp execute(commands, mode, max_steps) do
+    case Executor.run(commands, mode, max_steps) do
+      :ok ->
+        :ok
+
+      {:compiled, compiled} ->
+        {:ok, compiled}
+
+      {:error, :hit_step_limit} ->
+        {:error,
+         "Hit maximum step limit. Possible infinite loop? Try increasing max steps or compiling"}
+    end
+  end
+
+  defp create_out_dir(out_dir) do
+    case File.mkdir_p(out_dir) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        {:error, "I couldn't create '#{out_dir}': #{:file.format_error(reason)}'"}
+    end
+  end
+
+  defp write_output_file(file_path, content) do
+    case File.write(file_path, content) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        {:error, "I couldn't write to '#{file_path}': #{:file.format_error(reason)}'"}
+    end
+  end
+
+  defp output_file_path(input_file_path, ext, out_dir) do
+    basename = Path.basename(input_file_path) |> Path.rootname()
+    output_file_name = "#{basename}.#{ext}"
+    Path.join(out_dir, output_file_name)
   end
 end

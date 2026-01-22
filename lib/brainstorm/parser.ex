@@ -49,10 +49,10 @@ defmodule Brainstorm.Parser do
   Invalid brainfuck code results in an error:
 
       iex> Brainstorm.Parser.parse("[")
-      {:error, "At least one loop is not closed properly."}
+      {:error, :unclosed_loop}
 
       iex> Brainstorm.Parser.parse("]")
-      {:error, "Missing loop start."}
+      {:error, :missing_loop_start}
 
   """
   def parse(code) do
@@ -85,7 +85,7 @@ defmodule Brainstorm.Parser do
     end
   end
 
-  defp do_parse(["]" | _rest], _commands), do: {:error, "Missing loop start."}
+  defp do_parse(["]" | _rest], _commands), do: {:error, :missing_loop_start}
 
   defp do_parse(["+" | _rest] = tokens, commands) do
     {count, rest} = cut_and_count(tokens, "+")
@@ -125,5 +125,5 @@ defmodule Brainstorm.Parser do
     do: extract_loop(rest, [token | loop_tokens], bracket_level)
 
   defp extract_loop([], _loop_tokens, bracket_level) when bracket_level >= 1,
-    do: {:error, "At least one loop is not closed properly."}
+    do: {:error, :unclosed_loop}
 end

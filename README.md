@@ -1,28 +1,33 @@
 # brainstorm
 
-An **optimizing compiler for Brainfuck**, written in Elixir.  
+An **optimizing compiler / interpreter for Brainfuck**, written in Elixir.  
 
 I love compilers and Elixir, but I didn’t want to write a huge parser or tokenizer and die from boredom. Brainfuck is small, simple, and lets me focus entirely on optimizations.  
 
-`brainstorm` takes Brainfuck code and produces optimized C programs that can be compiled and run.  
+`brainstorm` is fully capable of interpreting `Brainfuck` code, as well as producing optimized `C` programs.
 
 ---
 
 ## Quick Example
 
 ```bash
-$ cat bf_snippets/hello.bf
+cat bf_snippets/hello.bf
 # >+++++++++[<++++++++>-]<.>+++++++[<++++>-]<+.+++++++..+++.>>>++++++++[<++++>-]<.>>>++++++++++[<+++++++++>-]<---.<<<<.+++.------.--------.>>+.>++++++++++.
+```
+
+### Interpret Brainfuck
+
+```bash
+./bs bf_snippets/hello.bf
+# Output: Hello World!
 ```
 
 ### Compile Brainfuck to C
 ```bash
-$ ./bs bf_snippets/hello.bf
+./bs bf_snippets/hello.bf --mode c
 ```
 
-Now we have `hello.c`.
-
-### The generated C program
+Now we have `hello.c`:
 
 ```c
 #include <stdio.h>
@@ -80,15 +85,37 @@ gcc -o hello hello.c
   arr[i] = 0;
   ```
 
+- **Compile-time execution**
+
+  `brainstorm` tries to execute code at compile-time as much as possible. To prevent an infinite time of compilation due to an unexpected infinite loop, `brainstorm` supports specifying steps limit - how many commands are allowed to be executed at compile-time. It defaults to `8192` and can be changed via `--max-steps` CLI argument.
+
 ---
 
-### Optimization Levels
+## Optimization Levels
 
 You can control which optimizations are applied using the `opt_level` argument:
 
-- `:o0` - No optimizations (original commands are returned as-is)  
-- `:o1` - Basic peephole optimizations  
-- `:o2` - Full optimizations (`:o1` plus removing trivial loops at start/end, fusing instructions, and unwrapping multiplication loops)  
+- `0` - No optimizations (original commands are returned as-is)  
+- `1` - Basic peephole optimizations  
+- `2` - Full optimizations (`:o1` plus removing trivial loops at start/end, fusing instructions, and unwrapping multiplication loops)  
+
+---
+
+## Examples
+
+```bash
+# Compile-time "Hello World!"
+./bs ./bf_snippets/hello.bf --mode c
+
+# Compile-time calculating squares or numbers from 1 to 1000
+./bs ./bf_snippets/squares.bf --mode c --max-steps 1000000
+
+# Run-time "Just another brainfuck hacker,"
+./bs ./bf_snippets/jabh.bf
+
+# A ghost game
+./bs ./bf_snippets/ghost.bf --mode c
+```
 
 ---
 
