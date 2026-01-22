@@ -206,7 +206,7 @@ defmodule Brainstorm.Optimizer do
 
     {loop_decrement, other_decrements} =
       decrements
-      |> Enum.split_while(&match?({:inc, -1, 0}, &1))
+      |> Enum.split_with(&match?({:inc, -1, 0}, &1))
 
     case {others, loop_decrement, other_decrements, increments} do
       {[], [_decrement], _decrements, _increments} ->

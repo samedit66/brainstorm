@@ -154,12 +154,11 @@ defmodule Brainstorm.Executor do
     current_value = Map.get(tape, i, 0)
 
     result =
-      dest_value +
-        case op do
-          :inc -> arg
-          :mult -> current_value * arg
-          :div -> div(current_value, arg)
-        end
+      case op do
+        :inc -> dest_value + arg
+        :mult -> dest_value + current_value * arg
+        :div -> dest_value - current_value * arg
+      end
 
     Map.put(tape, dest, clamp_integer(result))
   end
