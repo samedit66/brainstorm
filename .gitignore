@@ -24,3 +24,6 @@ brainfuck-*.tar
 
 # Executable
 bs
+
+# Any C files
+*.c
