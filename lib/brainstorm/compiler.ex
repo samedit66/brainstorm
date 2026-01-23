@@ -1,6 +1,14 @@
 defmodule Brainstorm.Compiler do
   alias Brainstorm.{Parser, Optimizer, Executor}
 
+  def run(:int, file_path, _backend, _ext, _out_dir, opt_level, max_steps) do
+    interpret(file_path, opt_level, max_steps)
+  end
+
+  def run(:comp, file_path, backend, ext, out_dir, opt_level, max_steps) do
+    compile(file_path, backend, ext, out_dir, opt_level, max_steps)
+  end
+
   def interpret(file_path, opt_level, max_steps) do
     with {:ok, bf_code} <- read_input_file(file_path),
          {:ok, parsed} <- parse(bf_code),

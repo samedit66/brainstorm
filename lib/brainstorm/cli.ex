@@ -6,16 +6,10 @@ defmodule Brainstorm.CLI do
   @no_input_message "No input file provided.\n\nUsage: #{@compiler_name} <file.bf> [-O0|O1|O2] [--outdir <dir>] [--mode <mode>] [--max-steps <steps]"
 
   def main(args \\ []) do
-    case parse_args(args) do
-      {:ok, {file, opt_level, out_dir, mode, max_steps}} ->
-        case mode do
-          :int ->
-            Compiler.interpret(file, opt_level, max_steps)
-
-          :comp ->
-            Compiler.compile(file, &C.render/1, "c", out_dir, opt_level, max_steps)
-        end
-
+    with {:ok, {file, opt_level, out_dir, mode, max_steps}} <- parse_args(args),
+         :ok <- Compiler.run(mode, file, &C.render/1, "c", out_dir, opt_level, max_steps) do
+      :ok
+    else
       {:error, reason} ->
         IO.puts(:stderr, reason)
         System.halt(1)

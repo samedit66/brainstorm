@@ -16,7 +16,7 @@ defmodule Brainstorm.Executor do
 
   - `:ok` - Interpreter mode finished suc cessfully.
   - `{:compiled, commands}` - Compile mode produced a compiled command list.
-  - `{:error, reason}` - An error occurred (for example `{:error, :hit_max_limit}` when the `:max_steps` limit was reached).
+  - `{:error, reason}` - An error occurred (for example `{:error, :hit_step_limit}` when the `:max_steps` limit was reached).
 
   """
   def run(commands, mode, max_steps) do
@@ -36,7 +36,7 @@ defmodule Brainstorm.Executor do
          _commands,
          %{steps: steps, max_steps: max_steps, mode: :int}
        )
-       when steps >= max_steps do
+       when max_steps != :infinity and steps >= max_steps do
     {:error, :hit_step_limit}
   end
 
@@ -58,11 +58,29 @@ defmodule Brainstorm.Executor do
       {:repeat, state_after} ->
         run_sequence(commands, state_after)
 
-      {:stop, same_state} ->
-        {:stop, same_state, commands}
+      {:stop, _state_after} ->
+        {:stop, state, commands}
 
       {:error, reason} ->
         {:error, reason}
+    end
+  end
+
+  # loop: either skip body or execute body; on body incomplete -> preserve outer state and return incomplete
+  defp run_single({:loop, body}, %{i: i, tape: tape} = state) do
+    if Map.get(tape, i, 0) == 0 do
+      {:next, state}
+    else
+      case run_sequence(body, state) do
+        {:end, state_after} ->
+          {:repeat, state_after}
+
+        {:stop, _state_after, _commands} ->
+          {:stop, state}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
     end
   end
 
@@ -135,19 +153,6 @@ defmodule Brainstorm.Executor do
     {:next, new_state}
   end
 
-  # loop: either skip body or execute body; on body incomplete -> preserve outer state and return incomplete
-  defp run_single({:loop, body}, %{i: i, tape: tape} = state) do
-    if Map.get(tape, i, 0) == 0 do
-      {:next, state}
-    else
-      case run_sequence(body, state) do
-        {:end, state_after} -> {:repeat, state_after}
-        {:stop, _state_after, _commands} -> {:stop, state}
-        other -> other
-      end
-    end
-  end
-
   defp do_arithmetic(op, arg, offset, tape, i) do
     dest = i + offset
     dest_value = Map.get(tape, dest, 0)
@@ -163,9 +168,7 @@ defmodule Brainstorm.Executor do
     Map.put(tape, dest, clamp_integer(result))
   end
 
-  defp clamp_integer(n) when n > 255, do: 0
-  defp clamp_integer(n) when n < 0, do: 255
-  defp clamp_integer(n), do: n
+  defp clamp_integer(n), do: rem(n, 256)
 
   defp post_process({:end, %{mode: :int}}), do: :ok
 
