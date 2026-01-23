@@ -133,10 +133,12 @@ mix escript.build
 ## Usage
 
 ```bash
-./bs <file.bf> [--opt-level 0|1|2] [--outdir <dir>]
+./bs <file.bf> [--opt-level 0|1|2] [--outdir <dir>] [--mode i|c] [--max-steps <number>|infinity]
 ```
 
 **Options:**
 
 - `--opt-level` (`-O`, `-o`) - Set optimization level (`0`, `1`, or `2`, default `2`)  
 - `--outdir` - Directory to write the generated C file (default: current directory)
+- `--mode` - Execution mode (`i` - interpretation or `c` - compilation, default `i`)
+- `--max-steps` - Maximum execution steps (any positive number or `infinity`, default `8192`)
